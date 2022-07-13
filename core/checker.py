@@ -3,7 +3,7 @@ from requests import request
 from random import choice
 import asyncio
 import aiohttp
-
+import time
 
 class ProxyChecker():
     def __init__(self, file="proxy.txt"):
@@ -21,32 +21,30 @@ class ProxyChecker():
         _res = request(method='get', url=choice(self.urls_for_ip),
                        headers={"User-Agent": self.user_agent},
                        timeout=5)
-        assert _res.status_code == 200, "Don't receive response from server. Please, " \
+        assert _res.status_code == 200, "No response received from the server. Please, " \
                                         "check internet connection and try run app again"
         return _res.text
 
     def read_file(self) -> tuple:
         with open(self.file) as proxy_list:
             proxy_tuple = tuple(map(str.rstrip, proxy_list.readlines()))
-        print(proxy_tuple)
+        #print(proxy_tuple)
         return proxy_tuple
 
     async def get_ip(self, session, proxy):
-        print(choice(self.urls_for_ip))
-        proxy = f"https://{proxy}"
+        proxy = f"http://{proxy}"
         url = choice(self.urls_for_ip)
         try:
-            async with session.get(url=url, proxy=proxy) as res:
+            async with session.get(url=url, proxy=proxy, timeout = 50) as res:
                 proxy_ip = await res.text()
-                print(f"Валидный прокси {proxy_ip=}")
                 return proxy_ip
         except Exception as e:
-            print(e)
-            print("not valid")
+            pass
 
 
     async def check_proxy(self):
         actions = []
+
         async with aiohttp.ClientSession() as session:
             for proxy in self.read_file():
                 actions.append(asyncio.ensure_future(self.get_ip(session, proxy)))
@@ -55,5 +53,6 @@ class ProxyChecker():
             result = [i for i in result if i!=None]
             print(result)
 
-
+start = time.time()
 asyncio.run(ProxyChecker().check_proxy())
+print(time.time()-start)
